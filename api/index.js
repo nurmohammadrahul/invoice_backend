@@ -11,48 +11,44 @@ const app = express();
 
 // Middleware
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json());
 
-// Routes
+// Test route
 app.get('/', (req, res) => {
   res.json({ 
     message: 'Invoice Management API is running!',
-    project: 'Invoice System',
-    database: 'MongoDB Atlas',
-    status: 'Connected',
     timestamp: new Date().toISOString()
   });
 });
 
 app.get('/api/test', (req, res) => {
   res.json({ 
-    message: 'Invoice API is working!',
-    project: 'Invoice Management System',
+    message: 'API is working!',
     timestamp: new Date().toISOString()
   });
 });
-
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'https://invoice-saiful.vercel.app',
+    'https://invoice-saiful.vercel.app'
+  ],
+  credentials: true
+}));
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/billing', billingRoutes);
 
 // MongoDB connection
 const connectDB = async () => {
   try {
-    console.log('🔗 Attempting to connect to MongoDB...');
-    
     if (!process.env.MONGODB_URI) {
-      console.log('❌ MONGODB_URI not found in environment variables');
+      console.log('❌ MONGODB_URI not found');
       return;
     }
     
-    await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    
-    console.log('✅ MongoDB Atlas connected successfully!');
-    console.log('📊 Database:', mongoose.connection.name);
-    
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('✅ MongoDB connected');
   } catch (error) {
     console.error('❌ MongoDB connection failed:', error.message);
   }

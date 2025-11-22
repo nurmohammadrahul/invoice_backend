@@ -7,11 +7,10 @@ const router = express.Router();
 // Initialize admin user in database
 const initializeAdmin = async () => {
   try {
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@invoice.com';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminPassword = process.env.ADMIN_PASSWORD;
     
     console.log('🔄 Checking/creating admin user...');
-    console.log('📧 Admin email:', adminEmail);
     
     const existingAdmin = await User.findOne({ email: adminEmail });
     
@@ -21,129 +20,88 @@ const initializeAdmin = async () => {
         email: adminEmail,
         password: adminPassword,
         role: 'admin',
-        companyName: process.env.COMPANY_NAME || 'Your Company',
-        address: process.env.COMPANY_ADDRESS || '123 Business Street',
-        city: process.env.COMPANY_CITY || 'City, State 12345',
-        phone: process.env.COMPANY_PHONE || '+1 (555) 123-4567'
+        companyName: process.env.COMPANY_NAME,
+        address: process.env.COMPANY_ADDRESS,
+        city: process.env.COMPANY_CITY,
+        phone: process.env.COMPANY_PHONE
       });
-      console.log('✅ Admin user created successfully:', adminUser.email);
+      console.log('✅ Admin user created successfully');
     } else {
-      console.log('✅ Admin user already exists:', existingAdmin.email);
+      console.log('✅ Admin user already exists');
     }
   } catch (error) {
     console.error('❌ Error initializing admin user:', error.message);
-    console.error('🔧 Error details:', error);
   }
 };
 
-// Initialize admin on startup
-setTimeout(() => {
-  initializeAdmin();
-}, 5000);
+// Initialize admin
+initializeAdmin();
 
-// GET endpoint to create admin (for browser access)
-router.get('/create-admin', async (req, res) => {
+// Test route
+router.get('/test', (req, res) => {
+  res.json({ 
+    success: true,
+    message: 'Auth routes are working!',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Create admin endpoint (GET - for browser)
+router.get('/setup', async (req, res) => {
   try {
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@invoice.com';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminPassword = process.env.ADMIN_PASSWORD;
     
-    console.log('🔄 Manual admin creation triggered');
+    console.log('🔄 Setting up admin user...');
     
-    // Check if admin already exists
-    const existingAdmin = await User.findOne({ email: adminEmail });
-    if (existingAdmin) {
+    // Check if admin exists
+    let adminUser = await User.findOne({ email: adminEmail });
+    
+    if (adminUser) {
       return res.json({
         success: true,
-        message: 'Admin user already exists',
+        message: '✅ Admin user already exists!',
         user: {
-          email: existingAdmin.email,
-          role: existingAdmin.role,
-          companyName: existingAdmin.companyName
+          email: adminUser.email,
+          role: adminUser.role
+        },
+        login: {
+          email: adminEmail,
+          password: adminPassword
         }
       });
     }
 
-    // Create admin user
-    const adminUser = await User.create({
+    // Create admin
+    adminUser = await User.create({
       email: adminEmail,
       password: adminPassword,
       role: 'admin',
-      companyName: process.env.COMPANY_NAME || 'Your Company',
-      address: process.env.COMPANY_ADDRESS || '123 Business Street',
-      city: process.env.COMPANY_CITY || 'City, State 12345',
-      phone: process.env.COMPANY_PHONE || '+1 (555) 123-4567'
+      companyName: process.env.COMPANY_NAME,
+      address: process.env.COMPANY_ADDRESS,
+      city: process.env.COMPANY_CITY,
+      phone: process.env.COMPANY_PHONE
     });
-
-    console.log('✅ Admin user created manually:', adminUser.email);
 
     res.json({
       success: true,
-      message: 'Admin user created successfully!',
+      message: '✅ Admin user created successfully!',
       user: {
         email: adminUser.email,
-        role: adminUser.role,
-        companyName: adminUser.companyName
+        role: adminUser.role
       },
-      credentials: {
+      login: {
         email: adminEmail,
         password: adminPassword
       }
     });
+    
   } catch (error) {
-    console.error('❌ Create admin error:', error);
+    console.error('❌ Setup error:', error);
     res.status(500).json({
       success: false,
       error: error.message,
-      details: 'Check MongoDB connection and environment variables'
-    });
-  }
-});
-
-// POST endpoint for create-admin (for programmatic access)
-router.post('/create-admin', async (req, res) => {
-  try {
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@invoice.com';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
-    
-    console.log('🔄 POST: Manual admin creation triggered');
-    
-    const existingAdmin = await User.findOne({ email: adminEmail });
-    if (existingAdmin) {
-      return res.json({
-        success: true,
-        message: 'Admin user already exists',
-        user: {
-          email: existingAdmin.email,
-          role: existingAdmin.role
-        }
-      });
-    }
-
-    const adminUser = await User.create({
-      email: adminEmail,
-      password: adminPassword,
-      role: 'admin',
-      companyName: process.env.COMPANY_NAME || 'Your Company',
-      address: process.env.COMPANY_ADDRESS || '123 Business Street',
-      city: process.env.COMPANY_CITY || 'City, State 12345',
-      phone: process.env.COMPANY_PHONE || '+1 (555) 123-4567'
-    });
-
-    console.log('✅ Admin user created via POST:', adminUser.email);
-
-    res.json({
-      success: true,
-      message: 'Admin user created successfully',
-      user: {
-        email: adminUser.email,
-        role: adminUser.role
-      }
-    });
-  } catch (error) {
-    console.error('❌ Create admin error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
+      help: 'Check MongoDB connection and environment variables'
     });
   }
 });
@@ -155,7 +113,6 @@ router.post('/login', async (req, res) => {
 
     console.log(`🔐 Login attempt for: ${email}`);
 
-    // Validation
     if (!email || !password) {
       return res.status(400).json({ 
         success: false,
@@ -163,11 +120,11 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Find user in database
+    // Find user
     const user = await User.findOne({ email: email.toLowerCase() });
     
     if (!user) {
-      console.log('❌ User not found:', email);
+      console.log('❌ User not found');
       return res.status(401).json({ 
         success: false,
         error: 'Invalid email or password' 
@@ -177,7 +134,7 @@ router.post('/login', async (req, res) => {
     // Check password
     const isPasswordCorrect = await user.correctPassword(password);
     if (!isPasswordCorrect) {
-      console.log('❌ Invalid password for user:', email);
+      console.log('❌ Invalid password');
       return res.status(401).json({ 
         success: false,
         error: 'Invalid email or password' 
@@ -191,11 +148,11 @@ router.post('/login', async (req, res) => {
         email: user.email, 
         role: user.role 
       },
-      process.env.JWT_SECRET || 'invoice-system-super-secret-key-2024',
-      { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
+      process.env.JWT_SECRET,
+      { expiresIn: '30d' }
     );
 
-    console.log('✅ Login successful for:', email);
+    console.log('✅ Login successful');
 
     res.json({
       success: true,
@@ -219,34 +176,44 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Check admin status
-router.get('/check-admin', async (req, res) => {
+// Verify token
+router.get('/verify', async (req, res) => {
   try {
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@invoice.com';
-    const adminUser = await User.findOne({ email: adminEmail });
+    const token = req.headers.authorization?.split(' ')[1];
     
-    if (adminUser) {
-      res.json({
-        success: true,
-        exists: true,
-        user: {
-          email: adminUser.email,
-          role: adminUser.role,
-          companyName: adminUser.companyName
-        }
-      });
-    } else {
-      res.json({
-        success: true,
-        exists: false,
-        message: 'Admin user not found. Use /create-admin to create one.'
+    if (!token) {
+      return res.status(401).json({ 
+        success: false,
+        error: 'No token provided' 
       });
     }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select('-password');
+    
+    if (!user) {
+      return res.status(401).json({ 
+        success: false,
+        error: 'User not found' 
+      });
+    }
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        companyName: user.companyName,
+        address: user.address,
+        city: user.city,
+        phone: user.phone
+      }
+    });
   } catch (error) {
-    console.error('❌ Check admin error:', error);
-    res.status(500).json({
+    res.status(401).json({ 
       success: false,
-      error: error.message
+      error: 'Invalid token' 
     });
   }
 });
