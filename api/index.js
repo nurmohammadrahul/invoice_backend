@@ -11,7 +11,7 @@ const app = express();
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // Routes
 app.get('/', (req, res) => {
@@ -38,8 +38,10 @@ app.use('/api/billing', billingRoutes);
 // MongoDB connection
 const connectDB = async () => {
   try {
+    console.log('🔗 Attempting to connect to MongoDB...');
+    
     if (!process.env.MONGODB_URI) {
-      console.log('⚠️ MONGODB_URI not found, using demo mode');
+      console.log('❌ MONGODB_URI not found in environment variables');
       return;
     }
     
@@ -49,9 +51,10 @@ const connectDB = async () => {
     });
     
     console.log('✅ MongoDB Atlas connected successfully!');
+    console.log('📊 Database:', mongoose.connection.name);
+    
   } catch (error) {
     console.error('❌ MongoDB connection failed:', error.message);
-    console.log('💡 Using demo mode');
   }
 };
 
