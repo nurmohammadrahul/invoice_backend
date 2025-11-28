@@ -1,47 +1,20 @@
 import mongoose from 'mongoose';
 
-const itemSchema = new mongoose.Schema({
-  description: {
-    type: String,
-    required: [true, 'Item description is required']
-  },
-  quantity: {
-    type: Number,
-    required: [true, 'Quantity is required'],
-    min: [1, 'Quantity must be at least 1']
-  },
-  price: {
-    type: Number,
-    required: [true, 'Price is required'],
-    min: [0, 'Price cannot be negative']
-  },
-  total: {
-    type: Number,
-    required: true
-  }
-});
-
 const invoiceSchema = new mongoose.Schema({
   invoiceNumber: {
     type: String,
-    required: [true, 'Invoice number is required'],
+    required: true,
     unique: true
   },
   from: {
-    name: {
-      type: String,
-      required: true
-    },
-    address: String,
-    city: String,
-    phone: String,
-    email: String
+    name: { type: String, default: 'VQS' },
+    address: { type: String, default: '256, Old Police Quarter, Shahid Shahidullah Kayser Sarak' },
+    city: { type: String, default: 'Feni City, Feni-3900, Bangladesh' },
+    phone: { type: String, default: '01842956166' },
+    email: { type: String, default: 'tipucbc@gmail.com' }
   },
   to: {
-    name: {
-      type: String,
-      required: [true, 'Client name is required']
-    },
+    name: { type: String, required: true },
     address: String,
     city: String,
     phone: String,
@@ -52,43 +25,48 @@ const invoiceSchema = new mongoose.Schema({
     default: Date.now
   },
   dueDate: Date,
-  items: [itemSchema],
-  subtotal: {
-    type: Number,
-    required: true
-  },
-  taxRate: {
-    type: Number,
-    default: 10
-  },
-  taxAmount: {
-    type: Number,
-    required: true
-  },
-  total: {
-    type: Number,
-    required: true
-  },
+  items: [{
+    description: { type: String, required: true },
+    quantity: { type: Number, required: true, min: 1 },
+    price: { type: Number, required: true, min: 0 },
+    total: { type: Number, required: true, min: 0 }
+  }],
+  subtotal: { type: Number, required: true },
+  taxRate: { type: Number, default: 0 },
+  taxAmount: { type: Number, default: 0 },
+  total: { type: Number, required: true },
   notes: String,
   status: {
     type: String,
     enum: ['draft', 'sent', 'paid', 'overdue'],
     default: 'draft'
-  },
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
   }
 }, {
   timestamps: true
 });
 
+// Calculate totals before saving
 invoiceSchema.pre('save', function(next) {
+  this.items.forEach(item => {
+    item.total = item.quantity * item.price;
+  });
+  
   this.subtotal = this.items.reduce((sum, item) => sum + item.total, 0);
   this.taxAmount = (this.subtotal * this.taxRate) / 100;
   this.total = this.subtotal + this.taxAmount;
+  
   next();
 });
 
-export default mongoose.model('Invoice', invoiceSchema);
+// Auto-generate invoice number
+invoiceSchema.pre('save', async function(next) {
+  if (this.isNew && !this.invoiceNumber) {
+    const count = await mongoose.model('Invoice').countDocuments();
+    this.invoiceNumber = `INV-${String(count + 1).padStart(4, '0')}`;
+  }
+  next();
+});
+
+const Invoice = mongoose.model('Invoice', invoiceSchema);
+
+export default Invoice;

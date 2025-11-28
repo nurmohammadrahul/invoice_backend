@@ -21,19 +21,19 @@ const userSchema = new mongoose.Schema({
   },
   companyName: {
     type: String,
-    default: 'My Company'
+    default: 'VQS'
   },
   address: {
     type: String,
-    default: '123 Business Street'
+    default: '256, Old Police Quarter, Shahid Shahidullah Kayser Sarak'
   },
   city: {
     type: String,
-    default: 'City, State 12345'
+    default: 'Feni City, Feni-3900, Bangladesh'
   },
   phone: {
     type: String,
-    default: '+1 (555) 123-4567'
+    default: '01842956166'
   }
 }, {
   timestamps: true
@@ -63,4 +63,6 @@ userSchema.methods.toJSON = function() {
   return user;
 };
 
-export default mongoose.model('User', userSchema);
+const User = mongoose.model('User', userSchema);
+
+export default User;
